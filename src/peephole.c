@@ -57,6 +57,24 @@ void ph2_ir_drop_after(basic_block_t *bb, ph2_ir_t *ir, ph2_ir_t *last)
         bb->ph2_ir_list.tail = ir;
 }
 
+/* Whether @reg is read from @from onwards before anything writes it.
+ *
+ * A register written again before any read holds nothing worth preserving, so
+ * the scan stops there; running off the end of the block means the answer
+ * depends on the successors, which this list cannot see, and true is the
+ * answer that keeps the caller from rewriting it.
+ */
+bool ph2_reg_read_later(ph2_ir_t *from, int reg)
+{
+    for (ph2_ir_t *ir = from; ir; ir = ir->next) {
+        if (ir->src0 == reg || ir->src1 == reg)
+            return true;
+        if (ir->dest == reg)
+            return false;
+    }
+    return true;
+}
+
 bool insn_fusion(basic_block_t *bb, ph2_ir_t *ph2_ir)
 {
     ph2_ir_t *next = ph2_ir->next;
@@ -68,7 +86,15 @@ bool insn_fusion(basic_block_t *bb, ph2_ir_t *ph2_ir)
      * that removes temporary register usage.
      */
     if (next->op == OP_assign) {
-        if (is_fusible_insn(ph2_ir) && ph2_ir->dest == next->src0) {
+        /* Writing the result straight into rd leaves rn holding what it held
+         * before, so the move may only be dropped when nothing reads rn after
+         * it. A value named twice is spilled to its own slot from rn further
+         * down the block, and fusing over that spill stored the stale
+         * register: "int r = a * b; int s = a * b; return r + s;" returned
+         * a * b + a.
+         */
+        if (is_fusible_insn(ph2_ir) && ph2_ir->dest == next->src0 &&
+            !ph2_reg_read_later(next->next, ph2_ir->dest)) {
             /* Pattern: {ALU rn, rs1, rs2; mv rd, rn} → {ALU rd, rs1, rs2}
              * Example: {add t1, a, b; mv result, t1} → {add result, a, b}
              */
