@@ -2609,6 +2609,12 @@ void sr_loop(func_t *func, basic_block_t *header, basic_block_t *latch)
         sr_sweep_dead_consts(func);
 }
 
+/* Loop-invariant code motion. Placed here rather than beside the other includes
+ * at the top of the file: it reuses sr_preheader() and the sr_gen stamp, both
+ * defined above.
+ */
+#include "opt-licm.c"
+
 void strength_reduce(void)
 {
     for (func_t *func = FUNC_LIST.head; func; func = func->next) {

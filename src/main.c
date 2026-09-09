@@ -242,6 +242,13 @@ int main(int argc, char *argv[])
      */
     rebuild_dom();
 
+    /* Run a loop's fixed computations once before it rather than once per
+     * iteration. Ahead of strength_reduce(): that pass rewrites address
+     * arithmetic into pointer increments, and an expression it has turned into
+     * an induction variable is no longer recognizable as invariant.
+     */
+    licm();
+
     /* Walk arrays with a pointer rather than recomputing addresses. */
     strength_reduce();
 
