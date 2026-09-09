@@ -555,10 +555,12 @@ struct var {
     bool is_global;
     bool is_const_qualified; /* true if variable has const qualifier */
     bool address_taken;      /* true if variable address was taken (&var) */
-    /* Working state for strength_reduce(): how many instructions in the
-     * function write the variable, whether it is written inside the loop being
-     * examined, and how much its value moves per iteration when it does. All
-     * three are recomputed per loop; nothing outside that pass reads them.
+    /* Working state for the passes that walk loops, strength_reduce() among
+     * them: how many instructions in the function write the variable, whether
+     * it is written inside the loop being examined, and how much its value
+     * moves per iteration when it does. Each such pass zeroes what it reads
+     * before reading it -- per function for def_cnt, per loop for the stamps --
+     * so none of them sees another's leftovers.
      */
     int def_cnt;
     int loop_stamp;
