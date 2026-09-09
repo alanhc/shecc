@@ -3334,6 +3334,14 @@ bool cse(insn_t *insn, const basic_block_t *bb)
     if (insn->rs1->is_global || insn->rs2->is_global)
         return false;
 
+    /* Nor with one whose address escaped. A store through the pointer can
+     * change the operand between the two occurrences, so the earlier result
+     * no longer stands for the later expression: "int x = a + b; int *p = &a;
+     * *p = 99; return a + b;" returned the value computed before the write.
+     */
+    if (insn->rs1->address_taken || insn->rs2->address_taken)
+        return false;
+
     /* Look for identical binary operations */
     for (insn_t *other = bb->insn_list.head; other; other = other->next) {
         if (other == insn)
